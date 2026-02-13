@@ -134,11 +134,9 @@ if st.sidebar.button("Predict Salary"):
 
     # Predict
     prediction = rf_model.predict(input_encoded)[0]
-  )
-
+  
     # Show Result
     if prediction == "High":
         st.success("💰 Predicted Salary: HIGH")
     else:
         st.warning("📉 Predicted Salary: LOW")
-
