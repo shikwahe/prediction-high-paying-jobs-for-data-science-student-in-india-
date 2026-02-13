@@ -1,7 +1,9 @@
+# ==========================================
+# 1️⃣ Import Libraries
+# ==========================================
 import streamlit as st
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
 
@@ -9,30 +11,49 @@ st.set_page_config(page_title="DS Salary Predictor")
 
 st.title("💼 Data Science Salary Classification")
 
+# ==========================================
+# 2️⃣ Load Dataset
+# ==========================================
 @st.cache_data
 def load_data():
     return pd.read_csv("ds_salaries.csv")
 
 df = load_data()
 
-# Create Binary Target
+# ==========================================
+# 3️⃣ Create Binary Target (High / Low)
+# ==========================================
 median_salary = df["salary_in_usd"].median()
+
 df["salary_binary"] = df["salary_in_usd"].apply(
     lambda x: "High" if x >= median_salary else "Low"
 )
 
+# ==========================================
+# 4️⃣ Select ONLY 5 Features (Important Fix)
+# ==========================================
+feature_cols = [
+    "experience_level",
+    "employment_type",
+    "job_title",
+    "company_location",
+    "company_size"
+]
+
+X = df[feature_cols]
 y = df["salary_binary"]
 
-X = df.drop(columns=[
-    "salary",
-    "salary_currency",
-    "salary_in_usd",
-    "salary_binary"
-])
-
+# ==========================================
+# 5️⃣ One-Hot Encoding
+# ==========================================
 X = pd.get_dummies(X, drop_first=True)
 
-# Train Model
+# Save column names for prediction alignment
+model_columns = X.columns
+
+# ==========================================
+# 6️⃣ Train-Test Split
+# ==========================================
 X_train, X_test, y_train, y_test = train_test_split(
     X, y,
     test_size=0.2,
@@ -40,20 +61,27 @@ X_train, X_test, y_train, y_test = train_test_split(
     stratify=y
 )
 
+# ==========================================
+# 7️⃣ Train Random Forest Model
+# ==========================================
 rf_model = RandomForestClassifier(
-    n_estimators=200,
-    max_depth=10,
+    n_estimators=300,
+    max_depth=12,
     random_state=42
 )
 
 rf_model.fit(X_train, y_train)
 
+# ==========================================
+# 8️⃣ Show Model Accuracy
+# ==========================================
 st.subheader("📊 Model Accuracy")
-st.write("Random Forest Accuracy:",
-         round(accuracy_score(y_test, rf_model.predict(X_test)), 3))
+accuracy = accuracy_score(y_test, rf_model.predict(X_test))
+st.write("Random Forest Accuracy:", round(accuracy, 3))
 
-# ---------------- Prediction Section ----------------
-
+# ==========================================
+# 9️⃣ Prediction Section
+# ==========================================
 st.subheader("🔮 Predict Salary Category")
 
 st.sidebar.header("Enter Job Details")
@@ -83,6 +111,9 @@ company_size = st.sidebar.selectbox(
     df["company_size"].unique()
 )
 
+# ==========================================
+# 🔮 Make Prediction
+# ==========================================
 if st.sidebar.button("Predict Salary"):
 
     input_dict = {
@@ -94,12 +125,22 @@ if st.sidebar.button("Predict Salary"):
     }
 
     input_df = pd.DataFrame([input_dict])
+
+    # One-hot encode input
     input_encoded = pd.get_dummies(input_df)
-    input_encoded = input_encoded.reindex(columns=X.columns, fill_value=0)
 
+    # Align with training columns
+    input_encoded = input_encoded.reindex(columns=model_columns, fill_value=0)
+
+    # Predict
     prediction = rf_model.predict(input_encoded)[0]
+    probability = rf_model.predict_proba(input_encoded)
 
+    # Show Result
     if prediction == "High":
         st.success("💰 Predicted Salary: HIGH")
     else:
         st.warning("📉 Predicted Salary: LOW")
+
+    # Show confidence
+    st.write("Prediction Probability:", probability)
