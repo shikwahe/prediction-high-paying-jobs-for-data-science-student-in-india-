@@ -132,6 +132,9 @@ if st.sidebar.button("Predict Salary"):
     # Align with training columns
     input_encoded = input_encoded.reindex(columns=model_columns, fill_value=0)
 
+    # Predict
+    prediction = rf_model.predict(input_encoded)[0]
+  )
 
     # Show Result
     if prediction == "High":
