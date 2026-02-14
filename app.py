@@ -23,7 +23,7 @@ def load_data():
 df = load_data()
 
 # ==========================================
-# 3️⃣ Create Binary Target (High / Low)
+# 3️⃣ Create Binary Target
 # ==========================================
 median_salary = df["salary_in_usd"].median()
 
@@ -62,7 +62,7 @@ X_train, X_test, y_train, y_test = train_test_split(
 )
 
 # ==========================================
-# 7️⃣ Train Random Forest Model
+# 7️⃣ Train Random Forest
 # ==========================================
 rf_model = RandomForestClassifier(
     n_estimators=300,
@@ -73,7 +73,7 @@ rf_model = RandomForestClassifier(
 rf_model.fit(X_train, y_train)
 
 # ==========================================
-# 8️⃣ Model Accuracy
+# 8️⃣ Model Performance
 # ==========================================
 st.subheader("📊 Model Performance")
 
@@ -95,7 +95,7 @@ col1, col2 = st.columns(2)
 # -----------------------------
 with col1:
     st.markdown("### 📈 Salary Distribution")
-    
+
     salary_counts = df["salary_binary"].value_counts()
 
     fig1, ax1 = plt.subplots(figsize=(4,3))
@@ -106,7 +106,6 @@ with col1:
     plt.xticks(rotation=0)
 
     st.pyplot(fig1)
-
 
 # -----------------------------
 # 📊 Feature Importance
@@ -145,47 +144,68 @@ st.sidebar.header("Enter Job Details")
 
 experience_level = st.sidebar.selectbox(
     "Experience Level",
-    df["experience_level"].unique()
+    sorted(df["experience_level"].unique())
 )
 
 employment_type = st.sidebar.selectbox(
     "Employment Type",
-    df["employment_type"].unique()
+    sorted(df["employment_type"].unique())
 )
 
 job_title = st.sidebar.selectbox(
     "Job Title",
-    df["job_title"].unique()
+    sorted(df["job_title"].unique())
 )
 
 company_location = st.sidebar.selectbox(
     "Company Location",
-    df["company_location"].unique()
+    sorted(df["company_location"].unique())
 )
 
 company_size = st.sidebar.selectbox(
     "Company Size",
-    df["company_size"].unique()
+    sorted(df["company_size"].unique())
 )
 
-# ==========================================
-# 🔮 Make Prediction
-# ==========================================
-if st.sidebar.button("Predict Salary"):
+# Predict button
+predict_button = st.sidebar.button("Predict Salary")
 
-    input_dict = {
-        "experience_level": experience_level,
-        "employment_type": employment_type,
-        "job_title": job_title,
-        "company_location": company_location,
-        "company_size": company_size
-    }
+if predict_button:
 
-    input_df = pd.DataFrame([input_dict])
+    input_data = pd.DataFrame({
+        "experience_level": [experience_level],
+        "employment_type": [employment_type],
+        "job_title": [job_title],
+        "company_location": [company_location],
+        "company_size": [company_size]
+    })
 
-    # One-hot encode input
-    input_encoded = pd.get_dummies(input_df)
+    # Encode
+    input_encoded = pd.get_dummies(input_data)
 
     # Align with training columns
     input_encoded = input_encoded.reindex(columns=model_columns, fill_value=0)
 
+    # Predict
+    prediction = rf_model.predict(input_encoded)[0]
+    confidence = rf_model.predict_proba(input_encoded).max()
+
+    st.subheader("🎯 Prediction Result")
+
+    if prediction == "High":
+        st.success("💰 Predicted Salary: HIGH")
+    else:
+        st.warning("📉 Predicted Salary: LOW")
+
+    st.info(f"Model Confidence: {round(confidence*100,2)} %")
+
+# ==========================================
+# 📌 Insights
+# ==========================================
+st.markdown("""
+---
+### 📌 Key Insights:
+- Experience level significantly impacts salary.
+- Certain job roles dominate high salary category.
+- Company size and location influence prediction outcome.
+""")
