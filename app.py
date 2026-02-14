@@ -11,7 +11,7 @@ from sklearn.metrics import accuracy_score
 
 st.set_page_config(page_title="DS Salary Predictor", layout="wide")
 
-st.title("💼 Data Science Salary Classification App")
+st.title("💼 Data Science Salary Classification Dashboard")
 
 # ==========================================
 # 2️⃣ Load Dataset
@@ -32,21 +32,7 @@ df["salary_binary"] = df["salary_in_usd"].apply(
 )
 
 # ==========================================
-# 📊 High vs Low Salary Distribution
-# ==========================================
-st.subheader("📈 Salary Category Distribution")
-
-salary_counts = df["salary_binary"].value_counts()
-
-fig_dist, ax_dist = plt.subplots()
-salary_counts.plot(kind='bar', ax=ax_dist)
-ax_dist.set_xlabel("Salary Category")
-ax_dist.set_ylabel("Count")
-ax_dist.set_title("High vs Low Salary Distribution")
-st.pyplot(fig_dist)
-
-# ==========================================
-# 4️⃣ Select 5 Features
+# 4️⃣ Select Features
 # ==========================================
 feature_cols = [
     "experience_level",
@@ -63,8 +49,6 @@ y = df["salary_binary"]
 # 5️⃣ One-Hot Encoding
 # ==========================================
 X = pd.get_dummies(X, drop_first=True)
-
-# Save column names for prediction alignment
 model_columns = X.columns
 
 # ==========================================
@@ -89,49 +73,68 @@ rf_model = RandomForestClassifier(
 rf_model.fit(X_train, y_train)
 
 # ==========================================
-# 8️⃣ Show Model Accuracy
+# 8️⃣ Model Accuracy
 # ==========================================
-st.subheader("📊 Model Accuracy")
+st.subheader("📊 Model Performance")
 
 accuracy = accuracy_score(y_test, rf_model.predict(X_test))
-st.write("Random Forest Accuracy:", round(accuracy, 3))
+
+colA, colB = st.columns(2)
+colA.metric("Model Accuracy", f"{round(accuracy*100,2)} %")
+colB.metric("Dataset Size", len(df))
 
 # ==========================================
-# 🌟 Feature Importance
+# 📊 Side-by-Side Visualizations
 # ==========================================
-st.subheader("🌟 Feature Importance (Top 15)")
+st.subheader("📊 Salary Insights Dashboard")
 
-importances = rf_model.feature_importances_
+col1, col2 = st.columns(2)
 
-feature_importance_df = pd.DataFrame({
-    "Feature": model_columns,
-    "Importance": importances
-})
+# -----------------------------
+# 📈 Salary Distribution
+# -----------------------------
+with col1:
+    st.markdown("### 📈 Salary Distribution")
+    
+    salary_counts = df["salary_binary"].value_counts()
 
-feature_importance_df = feature_importance_df.sort_values(
-    by="Importance",
-    ascending=False
-)
+    fig1, ax1 = plt.subplots(figsize=(4,3))
+    salary_counts.plot(kind='bar', ax=ax1)
+    ax1.set_xlabel("Category")
+    ax1.set_ylabel("Count")
+    ax1.set_title("High vs Low")
+    plt.xticks(rotation=0)
 
-st.dataframe(feature_importance_df.head(15))
+    st.pyplot(fig1)
 
-# ==========================================
-# 📊 Feature Importance Visualization
-# ==========================================
-fig_imp, ax_imp = plt.subplots(figsize=(8,6))
 
-feature_importance_df.head(15).plot(
-    kind='barh',
-    x="Feature",
-    y="Importance",
-    ax=ax_imp
-)
+# -----------------------------
+# 📊 Feature Importance
+# -----------------------------
+with col2:
+    st.markdown("### 🌟 Top 10 Important Features")
 
-ax_imp.invert_yaxis()
-ax_imp.set_title("Top 15 Feature Importances")
-ax_imp.set_xlabel("Importance Score")
+    importances = rf_model.feature_importances_
 
-st.pyplot(fig_imp)
+    feature_importance_df = pd.DataFrame({
+        "Feature": model_columns,
+        "Importance": importances
+    }).sort_values(by="Importance", ascending=False)
+
+    fig2, ax2 = plt.subplots(figsize=(4,3))
+
+    feature_importance_df.head(10).plot(
+        kind='barh',
+        x="Feature",
+        y="Importance",
+        ax=ax2
+    )
+
+    ax2.invert_yaxis()
+    ax2.set_title("Top 10 Features")
+    ax2.set_xlabel("Score")
+
+    st.pyplot(fig2)
 
 # ==========================================
 # 🔮 Prediction Section
@@ -186,20 +189,3 @@ if st.sidebar.button("Predict Salary"):
     # Align with training columns
     input_encoded = input_encoded.reindex(columns=model_columns, fill_value=0)
 
-    # Predict
-    prediction = rf_model.predict(input_encoded)[0]
-
-    if prediction == "High":
-        st.success("💰 Predicted Salary: HIGH")
-    else:
-        st.warning("📉 Predicted Salary: LOW")
-
-# ==========================================
-# 📌 Insights Section
-# ==========================================
-st.markdown("""
-### 📌 Key Insights:
-- Experience level strongly impacts salary classification.
-- Certain job titles are associated with higher salary groups.
-- Company size and location influence salary prediction.
-""")
